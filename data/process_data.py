@@ -1,8 +1,25 @@
 import sys
 import argparse
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import re
+from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
-    pass
+
+    # Load messages and categories
+    try:
+        messages = pd.read_csv(messages_filepath)
+        categories = pd.read_csv(categories_filepath)
+    except FileNotFoundError:
+        print('The file(s) have not been found. Please check the names of the file(s)')
+        sys.exit("Terminating program..")
+
+    # Merge datasets on 'id'
+    df = messages.merge(categories, on = 'id')
+    return df
+
 
 
 def clean_data(df):
