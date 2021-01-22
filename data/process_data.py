@@ -34,7 +34,7 @@ def load_data(messages_filepath, categories_filepath):
     df = messages.merge(categories, on = 'id')
 
     # We can drop the columns we don't plan on using:
-    df.drop(['id', 'original', 'genre'], axis = 1, inplace=True)
+    df.drop(['id', 'original'], axis = 1, inplace=True)
 
     return df
 
@@ -125,17 +125,22 @@ def clean_data(df):
 
     # We will now perform an OR operation:
     for message in duplicated_messages:
+        # I can do this because I've seen that in all duplicated messages the 
+        # genre tag is identical
+        genre = df[df.message == message].iloc[0,1]
         # We perform an OR operation:
-        aux = df[df.message == message].drop(['message'], axis = 1).sum(axis = 0)
+        aux = df[df.message == message].drop(['message','genre'], axis = 1).sum(axis = 0)
         # Now I have to replace everything bigger than 1 by 1:
         columns_to_fix = aux[aux>1].index
         aux.loc[columns_to_fix] = 1
 
         # We now assign this to the original DF:
-        df.loc[df.message == message, :] = pd.Series(message).append(aux).values
+        df.loc[df.message == message, :] = pd.Series(message).append(pd.Series(genre)).append(aux).values
 
     
     df.drop_duplicates(inplace=True)
+
+    
     
     
     return df
