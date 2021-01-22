@@ -8,6 +8,18 @@ from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
 
+     """ This function loads the csv files and returns the merged dataframe. (EXTRACT)
+    
+    Inputs: 
+        -messages_filepath: message CSV.
+        -category_filepath: category CSV.
+
+    Output:
+        -df: merged dataframe.
+    """
+
+
+
     # Load messages and categories
     try:
         messages = pd.read_csv(messages_filepath)
@@ -30,6 +42,20 @@ def load_data(messages_filepath, categories_filepath):
 
 def clean_data(df):
 
+    """ This function cleans the data (TRANSFORM):
+        1- Process the categories column. 
+        2- Correct errors.
+        3- Finds duplicates, combines them and drops them
+    
+    Input: 
+        -df: Messy extracted dataframe.
+
+    Output:
+        -df: Clean df.
+    """
+
+
+
     # Ceate a dataframe of the 36 individual category columns
     categories = df.categories.str.split(pat=';', expand = True)
 
@@ -37,15 +63,11 @@ def clean_data(df):
 
     # Each row in the categories dataframe looks like this:
     """
-    0                    related-1
-    1                    request-0
-    2                      offer-0
-    ..............................
-    33                      cold-0
-    34             other_weather-0
-    35             direct_report-0
-    Name: 0, dtype: object
+    0   related-1   request-0   offer-0 ....... other_weather-0 direct_report-0
+    1   related-1   request-1   offer-0 ....... other_weather-0 direct_report-0
+                                        .......
     """
+
     columns = categories.iloc[0,:].str.split('-').str.get(0)
     categories.columns = columns
 
@@ -68,7 +90,7 @@ def clean_data(df):
         categories[column] = categories[column].apply(lambda val: 1 if val != 0 else val)
 
 
-    # drop the original categories column from df and concat the transformed one
+    # Drop the original categories column from df and concat the transformed one
     df.drop(['categories'], axis=1, inplace = True)
     df = pd.concat([df, categories], axis = 1)
 
@@ -122,14 +144,33 @@ def clean_data(df):
 
 def save_data(df, database_filename, table_name):
 
+    """ This function saves the cleaned data (LOAD):
+        
+    
+    Inputs: 
+        -df: Cleaned dataframe.
+        -database_filename: Database in which we will save the proccesed df.
+        -table_name: Table name for the cleaned data.
+
+    Output:
+        -None.
+    """
+
+
     # Save clean data into SQLite database:
     engine = create_engine(database_filename)
     df.to_sql(table_name, engine, index=False, if_exists='replace')  
 
-    # Check it works
-    #print(engine.execute("SELECT * FROM {} LIMIT 2".format(table_name)).fetchall())
 
 def parse_inputs():
+
+     """ Parses the input arguments
+    
+    Input: Command line inputs specified by the user.
+    Output: Parsed command line inputs
+    
+    """
+
     parser = argparse.ArgumentParser(description='ETL Pipeline')
     parser.add_argument('messages_filepath', type = str, help = 'Message dataset')
     parser.add_argument('category_filepath', type = str, help = 'Categories dataset')
@@ -140,6 +181,17 @@ def parse_inputs():
     return parser.parse_args()
 
 def main():
+
+    """ Calls the ETL pipeline:
+        0. parse CLI arguments --> parse_inputs()
+        1. Extract --> load_data(messages_filepath, categories_filepath)
+        2. Transform --> clean_data(df)
+        3. Load --> save_data(df, database_filepath, table_name)
+
+        Usage:
+        process_data.py message_fp.csv, categories_fp.csv, database_fp, --table_name my_table
+
+    """
     print("--Exeuting ETL Pipeline--")
     args = parse_inputs()
    
