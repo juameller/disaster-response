@@ -23,6 +23,7 @@ def load_data(messages_filepath, categories_filepath):
 
     # We can drop the columns we don't plan on using:
     df.drop(['id', 'original', 'genre'], axis = 1, inplace=True)
+
     return df
 
 
@@ -119,28 +120,36 @@ def clean_data(df):
 
 
 
-    
+def save_data(df, database_filename, table_name):
 
+    # Save clean data into SQLite database:
+    engine = create_engine(database_filename)
+    df.to_sql(table_name, engine, index=False, if_exists='replace')  
 
-def save_data(df, database_filename):
-    pass  
+    # Check it works
+    #print(engine.execute("SELECT * FROM {} LIMIT 2".format(table_name)).fetchall())
 
 def parse_inputs():
     parser = argparse.ArgumentParser(description='ETL Pipeline')
     parser.add_argument('messages_filepath', type = str, help = 'Message dataset')
     parser.add_argument('category_filepath', type = str, help = 'Categories dataset')
     parser.add_argument('database_filepath', type = str, help = 'Database')
+    parser.add_argument('--table_name',type = str, default = 'disaster', help = 'Table name')
+
+
     return parser.parse_args()
 
 def main():
     print("--Exeuting ETL Pipeline--")
     args = parse_inputs()
    
-    messages_filepath, categories_filepath, database_filepath = args.messages_filepath, \
+    messages_filepath, categories_filepath, database_filepath, table_name = args.messages_filepath, \
                                                                 args.category_filepath, \
-                                                                args.database_filepath
+                                                                'sqlite:///' + args.database_filepath,\
+                                                                args.table_name
 
 
+    
     print('Loading data...\n    MESSAGES: {}\n    CATEGORIES: {}'.format(messages_filepath, 
                                                                          categories_filepath))
     df = load_data(messages_filepath, categories_filepath)
@@ -149,7 +158,7 @@ def main():
     df = clean_data(df)
         
     print('Saving data...\n    DATABASE: {}'.format(database_filepath))
-    save_data(df, database_filepath)
+    save_data(df, database_filepath, table_name)
         
     print('Cleaned data saved to database!')
     
