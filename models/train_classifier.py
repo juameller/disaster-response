@@ -127,7 +127,6 @@ class WordCount(BaseEstimator, TransformerMixin):
         def transform(self, X):
             We obtain the normalized word count.
 
-
     """
 
     def __init__(self):
@@ -143,6 +142,54 @@ class WordCount(BaseEstimator, TransformerMixin):
     def transform(self, X):
         # We will always normalize the results using the mean and std obtained in the fit method:
         return pd.DataFrame(self.standardscaler.transform(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float)))
+
+
+
+
+class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+
+    """ We define a StartingVerb transformer. A custom transformer inherits from BaseEstimator and TransformerMixin
+        
+        def __init__(self): 
+            We do not need to implement this in this case.
+
+        def fit(self, X, y=None): 
+            We do not have to fit anything.
+
+        def transform(self, X):
+            We convert X to a dataframe and apply the function starting_verb. Returns a Dataframe with
+            the results.
+
+        def staring_verb(self, text):
+            We go through the sentences of each messages, tokenize them, obtain the part of speech tag
+            and if the first word of any of the sentences of the message is either a verb or RT we 
+            return True (otherwise, return false).
+    """
+
+    def starting_verb(self, text):
+        sentence_list = nltk.sent_tokenize(text)
+        for sentence in sentence_list:
+            pos_tags = nltk.pos_tag(tokenize(sentence))
+            
+            # Since we are removing punctuation, some sentences might be completely empty.
+            # In order to prevent an IndexError:
+            try:
+                first_word, first_tag = pos_tags[0]
+                if first_tag in ['VB', 'VBP'] or first_word == 'RT':
+                    return True
+            except IndexError:
+                pass
+                # There was an empty sencente (due to punctuation, we want it ignored)
+        return False
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_tagged = pd.Series(X).apply(self.starting_verb)
+        return pd.DataFrame(X_tagged)
+
+
 
 
 def build_model():
@@ -169,6 +216,11 @@ def main():
 
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+
+    
+
+    #sys.exit(0)
+
         
     print('Building model...')
     model = build_model()
