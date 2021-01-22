@@ -50,16 +50,14 @@ def load_data(database_filepath, table_name):
     # Load df from SQLite db:
     engine = create_engine('sqlite:///'+database_filepath)
     df = pd.read_sql(table_name, engine)
-    X = df[['message']] 
+    X = df.message.values 
     Y = df.drop(['message'], axis = 1)
 
     # Obtain category names
     category_names = Y.columns
 
-    
-
     # We now convert the DF to arrays:
-    X = X.values
+
     Y = Y.values
 
     return X,Y, category_names
@@ -67,7 +65,53 @@ def load_data(database_filepath, table_name):
 
 
 def tokenize(text):
-    pass
+    """ Tokenize function
+    Input: 
+        text: single message
+
+    Output:
+        clean_tokens
+
+    The tokenize functions performs the following tasks:
+
+        1. Replace every URL by a placeholder.
+        2. Eliminate punctuation.
+        3. Replace numbers by placeholders.
+        4. Tokenize text.
+        5. Remove stop words.
+        6. Lower case each token and lemmatize it.
+
+    """
+    
+    url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    detected_urls = re.findall(url_regex, text)
+    
+    for url in detected_urls:
+        text = text.replace(url, "urlplaceholder")
+    
+    # We can get rid of the puntuation:
+    text = re.sub(r'[^a-zA-Z0-9]', ' ', text)
+    
+    # We will repalce all numbers for a placeholder:
+    numbers = re.findall(r'[0-9]+', text)
+    for number in numbers:
+        text = text.replace(number, 'nphdr')
+    
+    
+    # Tokenize
+    tokens = word_tokenize(text)
+    
+    # Eliminate stop words in Englisg
+    words = [token for token in tokens if token not in stopwords.words('english') ]
+    
+    lemmatizer = WordNetLemmatizer()
+
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
+
+    return clean_tokens
 
 
 def build_model():
@@ -90,6 +134,9 @@ def main():
     database_filepath, model_filepath, table_name = args.database_filepath, args.classifier_filepath, args.table_name
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath, table_name)
+
+
+
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
     print('Building model...')
