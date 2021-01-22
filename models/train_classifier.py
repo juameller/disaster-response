@@ -37,6 +37,7 @@ def parse_inputs():
     parser.add_argument('--starting_verb',type = bool, default = False, help = 'Use StartingVerb Transformer')
     parser.add_argument('--keyword_search',type = bool, default = False, help = 'Use KeyWordSearch Transformer')
     parser.add_argument('--wordcount',type = bool, default = False, help = 'Use WordCount Transformer')
+    
 
 
     return parser.parse_args()
@@ -56,7 +57,7 @@ def load_data(database_filepath, table_name):
     engine = create_engine('sqlite:///'+database_filepath)
     df = pd.read_sql(table_name, engine)
     X = df.message.values 
-    Y = df.drop(['message'], axis = 1)
+    Y = df.drop(['message', 'genre'], axis = 1)
 
     # Obtain category names
     category_names = Y.columns
@@ -268,7 +269,7 @@ def build_model(args):
         ])
 
     parameters = {
-        #'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
+        #'features__text_pipeline__vect__ngram_range': [(1,1),(1,2)],
         #'features__text_pipeline__vect__max_df': (0.85, 1.0),
         #'features__text_pipeline__vect__max_features': (None, 5000),
         #'clf__estimator__n_estimators': [200,500],
@@ -287,7 +288,7 @@ def build_model(args):
 
 def evaluate_model(model, X_test, Y_test, category_names):
     Y_pred = model.predict(X_test)
-    print(classification_report(Y_test, Y_pred, target_names = category_names, zero_division = 0))
+    print(classification_report(Y_test, Y_pred, target_names = category_names))
 
 
 def save_model(model, model_filepath):
