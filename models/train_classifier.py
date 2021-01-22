@@ -114,6 +114,37 @@ def tokenize(text):
     return clean_tokens
 
 
+class WordCount(BaseEstimator, TransformerMixin):
+    """ We define a WordCount transformer. A custom transformer inherits from BaseEstimator and TransformerMixin
+        
+        def __init__(self): 
+            We have to initialize StandardScaler(). Since the X matrix will be small values, we want to normalize 
+            the number of words too.
+
+        def fit(self, X, y=None): 
+            We split the words, obtain the length of the resulting list and fit the StandardScaler.
+
+        def transform(self, X):
+            We obtain the normalized word count.
+
+
+    """
+
+    def __init__(self):
+        # Initialize the standardscaler
+        self.standardscaler = StandardScaler()
+        
+
+    def fit(self, X, y=None):
+        # Fit the standardScaler
+        self.standardscaler.fit(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float))
+        return self
+
+    def transform(self, X):
+        # We will always normalize the results using the mean and std obtained in the fit method:
+        return pd.DataFrame(self.standardscaler.transform(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float)))
+
+
 def build_model():
     pass
 
