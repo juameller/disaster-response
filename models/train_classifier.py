@@ -18,6 +18,7 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import classification_report
 from sklearn.base import BaseEstimator, TransformerMixin
+import pickle
 
 
 def parse_inputs():
@@ -33,6 +34,10 @@ def parse_inputs():
     parser.add_argument('database_filepath', type = str, help = 'Database')
     parser.add_argument('classifier_filepath', type = str, help = 'Picle file')
     parser.add_argument('--table_name',type = str, default = 'disaster', help = 'Table name')
+    parser.add_argument('--starting_verb',type = bool, default = False, help = 'Use StartingVerb Transformer')
+    parser.add_argument('--keyword_search',type = bool, default = False, help = 'Use KeyWordSearch Transformer')
+    parser.add_argument('--wordcount',type = bool, default = False, help = 'Use WordCount Transformer')
+
 
     return parser.parse_args()
 
@@ -129,19 +134,23 @@ class WordCount(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self):
-        # Initialize the standardscaler
+    def __init__(self, active = False):
+        # Initialize the standardscaler and wether we plan to use it or no:
         self.standardscaler = StandardScaler()
+        self.active = active
         
 
     def fit(self, X, y=None):
         # Fit the standardScaler
-        self.standardscaler.fit(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float))
+        if self.active:
+            self.standardscaler.fit(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float))
         return self
 
     def transform(self, X):
-        # We will always normalize the results using the mean and std obtained in the fit method:
-        return pd.DataFrame(self.standardscaler.transform(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float)))
+        if self.active:
+            # We will always normalize the results using the mean and std obtained in the fit method:
+            return pd.DataFrame(self.standardscaler.transform(pd.Series(X).str.split().str.len().values.reshape(-1,1).astype(np.float)))
+        return None
 
 
 
@@ -151,7 +160,7 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
     """ We define a StartingVerb transformer. A custom transformer inherits from BaseEstimator and TransformerMixin
         
         def __init__(self): 
-            We do not need to implement this in this case.
+            We define a special case so we can skip it.
 
         def fit(self, X, y=None): 
             We do not have to fit anything.
@@ -165,6 +174,8 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
             and if the first word of any of the sentences of the message is either a verb or RT we 
             return True (otherwise, return false).
     """
+    def __init__(self, active = False):
+        self.active = active
 
     def starting_verb(self, text):
         sentence_list = nltk.sent_tokenize(text)
@@ -186,8 +197,10 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
-        X_tagged = pd.Series(X).apply(self.starting_verb)
-        return pd.DataFrame(X_tagged)
+        if self.active:
+            X_tagged = pd.Series(X).apply(self.starting_verb)
+            return pd.DataFrame(X_tagged)
+        return None
 
 
 
@@ -214,8 +227,9 @@ class KeyWordSearch(BaseEstimator, TransformerMixin):
     
     def __init__(self, keywords = ['medical', 'doctor', 'injections', 'sick', 'bandage', 'help', 'alone', 'child', 'water','thirst', 'drought'\
            ,'rescue', 'search','trapped','lost', 'food', 'famine','dead','death','money','homeless','accident','floods'\
-           ,'fire', 'wildfire','hospital','aid','storm','hail','earthquake','cold','blanket','weather']):
+           ,'fire', 'wildfire','hospital','aid','storm','hail','earthquake','cold','blanket','weather'], active = False):
         self.keywords = keywords
+        self.active = active
 
     def check_keywords(self, row):
         wordset =  set(tokenize(row.values[0]))
@@ -229,22 +243,55 @@ class KeyWordSearch(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
-        #X_tagged = pd.Series(X).apply(self.check_keywords)
-        df = pd.DataFrame(X)
-        df_tagged = df.apply(self.check_keywords, axis = 1)
-        return df_tagged
+        if self.active:
+            df = pd.DataFrame(X)
+            df_tagged = df.apply(self.check_keywords, axis = 1)
+            return df_tagged
+        return None
 
 
 def build_model(args):
-    pass
+    # Create new pipeline
+    pipeline = Pipeline([
+            ('features', FeatureUnion([
+
+                ('text_pipeline', Pipeline([
+                    ('vect', CountVectorizer(tokenizer=tokenize)),
+                    ('tfidf', TfidfTransformer())
+                ])),
+                ('starting_verb', StartingVerbExtractor()),
+                ('keyword_search',KeyWordSearch()),
+                ('wordcount', WordCount())
+            ])),
+
+            ('clf', RandomForestClassifier())
+        ])
+
+    parameters = {
+        #'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
+        #'features__text_pipeline__vect__max_df': (0.85, 1.0),
+        #'features__text_pipeline__vect__max_features': (None, 5000),
+        #'clf__estimator__n_estimators': [200,500],
+        #'clf__min_samples_split': [2, 3, 4],
+        'features__starting_verb__active': [args.starting_verb],
+        'features__keyword_search__active': [args.keyword_search],
+        'features__wordcount__active': [args.wordcount],
+        'features__text_pipeline__tfidf__use_idf': [True, False]
+
+    }
+
+    cv = GridSearchCV(pipeline, param_grid=parameters)
+
+    return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    Y_pred = model.predict(X_test)
+    print(classification_report(Y_test, Y_pred, target_names = category_names, zero_division = 0))
 
 
 def save_model(model, model_filepath):
-    pass
+    pickle.dump(model.best_estimator_, open(filename, 'wb'))
 
 
 
@@ -252,6 +299,7 @@ def save_model(model, model_filepath):
 
 def main():
     args = parse_inputs()
+
     database_filepath, model_filepath, table_name = args.database_filepath, args.classifier_filepath, args.table_name
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath, table_name)
@@ -261,12 +309,10 @@ def main():
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
 
     
-
         
     print('Building model...')
     model = build_model(args)
         
-    #sys.exit(0)
 
     print('Training model...')
     model.fit(X_train, Y_train)
