@@ -192,7 +192,50 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
 
 
 
-def build_model():
+class KeyWordSearch(BaseEstimator, TransformerMixin):
+
+    """ We define a KeyWordSearch transformer. A custom transformer inherits from BaseEstimator and TransformerMixin
+        
+        def __init__(self): 
+            Define the Keywords we want to be searched
+
+        def fit(self, X, y=None): 
+            We do not have to fit anything.
+
+        def transform(self, X):
+            We convert X to a dataframe and apply the function check_keywords. Returns a Dataframe with
+            with whether the keywords are present in the message.
+
+        def check_keywords(self, text):
+            We go through the sentences of each messages, tokenize them, obtain the part of speech tag
+            and if the first word of any of the sentences of the message is either a verb or RT we 
+            return True (otherwise, return false).
+    """
+    
+    def __init__(self, keywords = ['medical', 'doctor', 'injections', 'sick', 'bandage', 'help', 'alone', 'child', 'water','thirst', 'drought'\
+           ,'rescue', 'search','trapped','lost', 'food', 'famine','dead','death','money','homeless','accident','floods'\
+           ,'fire', 'wildfire','hospital','aid','storm','hail','earthquake','cold','blanket','weather']):
+        self.keywords = keywords
+
+    def check_keywords(self, row):
+        wordset =  set(tokenize(row.values[0]))
+        for item in self.keywords:
+            row[item] = 0
+            if item in wordset:
+                row[item] = 1
+        return row[self.keywords]
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        #X_tagged = pd.Series(X).apply(self.check_keywords)
+        df = pd.DataFrame(X)
+        df_tagged = df.apply(self.check_keywords, axis = 1)
+        return df_tagged
+
+
+def build_model(args):
     pass
 
 
@@ -219,12 +262,12 @@ def main():
 
     
 
-    #sys.exit(0)
-
         
     print('Building model...')
-    model = build_model()
+    model = build_model(args)
         
+    #sys.exit(0)
+
     print('Training model...')
     model.fit(X_train, Y_train)
         
