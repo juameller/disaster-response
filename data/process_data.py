@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
 
-     """ This function loads the csv files and returns the merged dataframe. (EXTRACT)
+    """ This function loads the csv files and returns the merged dataframe. (EXTRACT)
     
     Inputs: 
         -messages_filepath: message CSV.
@@ -132,7 +132,7 @@ def clean_data(df):
         aux.loc[columns_to_fix] = 1
 
         # We now assign this to the original DF:
-        df.loc[df.message == message, columns] = pd.Series(message).append(aux)
+        df.loc[df.message == message, :] = pd.Series(message).append(aux).values
 
     
     df.drop_duplicates(inplace=True)
@@ -164,7 +164,7 @@ def save_data(df, database_filename, table_name):
 
 def parse_inputs():
 
-     """ Parses the input arguments
+    """ Parses the input arguments
     
     Input: Command line inputs specified by the user.
     Output: Parsed command line inputs
