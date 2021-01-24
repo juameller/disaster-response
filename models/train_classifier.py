@@ -259,10 +259,10 @@ def build_model(args):
                 ('text_pipeline', Pipeline([
                     ('vect', CountVectorizer(tokenizer=tokenize)),
                     ('tfidf', TfidfTransformer())
-                ])),
-                ('starting_verb', StartingVerbExtractor()),
-                ('keyword_search',KeyWordSearch()),
-                ('wordcount', WordCount())
+                ]))
+                #('starting_verb', StartingVerbExtractor()),
+                #('keyword_search',KeyWordSearch()),
+                #('wordcount', WordCount())
             ])),
 
             ('clf', RandomForestClassifier())
@@ -274,9 +274,9 @@ def build_model(args):
         #'features__text_pipeline__vect__max_features': (None, 5000),
         #'clf__estimator__n_estimators': [200,500],
         #'clf__min_samples_split': [2, 3, 4],
-        'features__starting_verb__active': [args.starting_verb],
-        'features__keyword_search__active': [args.keyword_search],
-        'features__wordcount__active': [args.wordcount],
+        #'features__starting_verb__active': [args.starting_verb],
+        #'features__keyword_search__active': [args.keyword_search],
+        #'features__wordcount__active': [args.wordcount],
         'features__text_pipeline__tfidf__use_idf': [True, False]
 
     }
@@ -292,7 +292,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
 
 def save_model(model, model_filepath):
-    pickle.dump(model.best_estimator_, open(filename, 'wb'))
+    pickle.dump(model.best_estimator_, open(model_filepath, 'wb'))
 
 
 

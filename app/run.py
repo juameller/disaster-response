@@ -32,7 +32,7 @@ engine = create_engine('sqlite:///../data/database.db')
 df = pd.read_sql_table('disaster', engine)
 
 # load model
-model = joblib.load("../models/second_clf.pkl")
+model = joblib.load("../models/third_clf.pkl")
 
 
 # index webpage displays cool visuals and receives user input text for model
@@ -44,6 +44,11 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+
+
+    # We now want to show how the data is distributed:
+    Y = df.drop(['message','genre'], axis = 1).sum().sort_values(ascending = False)
+    Y_norm = Y/(df.shape[0])*100
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -65,7 +70,28 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+
+        {
+            'data': [
+                Bar(
+                    x=list(Y_norm.index),
+                    y=Y_norm
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of categories',
+                'yaxis': {
+                    'title': "Percentage of messages"
+                },
+                'xaxis': {
+                    'title': "Category"
+                }
+            }
         }
+
+
     ]
     
     # encode plotly graphs in JSON
