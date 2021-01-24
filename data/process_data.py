@@ -187,17 +187,9 @@ def parse_inputs():
 
 def main():
 
-    """ Calls the ETL pipeline:
-        0. parse CLI arguments --> parse_inputs()
-        1. Extract --> load_data(messages_filepath, categories_filepath)
-        2. Transform --> clean_data(df)
-        3. Load --> save_data(df, database_filepath, table_name)
-
-        Usage:
-        process_data.py message_fp.csv, categories_fp.csv, database_fp, --table_name my_table
-
-    """
     print("--Exeuting ETL Pipeline--")
+
+    # Parse user input arguments
     args = parse_inputs()
    
     messages_filepath, categories_filepath, database_filepath, table_name = args.messages_filepath, \
