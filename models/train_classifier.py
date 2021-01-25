@@ -400,13 +400,13 @@ def build_model(args):
                 ('text_pipeline', Pipeline([
                     ('vect', CountVectorizer(tokenizer=tokenize)),
                     ('tfidf', TfidfTransformer())
-                ]))
+                ])),
                 #('starting_verb', StartingVerbExtractor()),
                 #('keyword_search',KeyWordSearch()),
-                #('wordcount', WordCount())
+                ('wordcount', WordCount())
             ])),
 
-            ('clf', RandomForestClassifier())
+            ('clf', MultiOutputClassifier(RandomForestClassifier()))
         ])
 
     parameters = {
@@ -414,11 +414,11 @@ def build_model(args):
         #'features__text_pipeline__vect__max_df': (0.85, 1.0),
         #'features__text_pipeline__vect__max_features': (None, 5000),
         #'clf__estimator__n_estimators': [200,500],
-        #'clf__min_samples_split': [2, 3, 4],
+        #'clf__estimator__min_samples_split': [2, 3, 4],
         #'features__starting_verb__active': [args.starting_verb],
         #'features__keyword_search__active': [args.keyword_search],
-        #'features__wordcount__active': [args.wordcount],
-        'features__text_pipeline__tfidf__use_idf': [True, False]
+        'features__wordcount__active': [True, False],
+        #'features__text_pipeline__tfidf__use_idf': [True, False]
 
     }
 
@@ -446,7 +446,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
     # Make predictions
     Y_pred = model.predict(X_test)
     # Print precision, recall and accuracy for the '1' labels:
-    print(classification_report(Y_test, Y_pred, target_names = category_names))
+    print(classification_report(Y_test, Y_pred, target_names = category_names, zero_division = 0))
 
 
 def save_model(model, model_filepath):
